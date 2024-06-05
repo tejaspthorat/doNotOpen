@@ -2,14 +2,29 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
+from picamera2 import Picamera2
+
+camera = Picamera2()
+
+
+camera.resolution = (640, 360)
+camera.rotation = 180
+modes = camera.sensor_modes
+mode = modes[1]
+print('mode selected: ', mode)
+camera_config = camera.create_still_configuration(raw={'format': mode['unpacked']}, sensor={'output_size': mode['size'], 'bit_depth': mode['bit_depth']}, main={"size":(640,480)})
+camera.configure(camera_config)
+print("cam initialized")
+camera.start()
+
+time.sleep(0.1)
+
 
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 mp_drawing = mp.solutions.drawing_utils
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
-
-cap = cv2.VideoCapture(0)
 
 # Eye aspect ratio thresholds and counters
 EAR_THRESH = 0.25
@@ -21,20 +36,16 @@ def eye_aspect_ratio(eye):
     # Compute the euclidean distances between the two sets of vertical eye landmarks
     A = np.linalg.norm(eye[1] - eye[5])
     B = np.linalg.norm(eye[2] - eye[4])
-
-    # Compute the euclidean distance between the horizontal eye landmark
     C = np.linalg.norm(eye[0] - eye[3])
-
-    # Compute the eye aspect ratio
     ear = (A + B) / (2.0 * C)
 
     return ear
 
-while cap.isOpened():
-    success, image = cap.read()
-    if not success:
-        break
-
+while True:
+    success = True
+    image = camera.capture_array()
+    # height,width, channel = image.shape
+    # print(height, ",", width)
     start = time.time()
 
     cv2.imshow("Raw", image)
